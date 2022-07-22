@@ -38,6 +38,7 @@ module uart(
 //parameter CLOCK_DIVIDE = 703; // clock rate (27Mhz) / (baud rate (9600) * 4)
 //parameter CLOCK_DIVIDE = 29; // clock rate (27Mhz) / (baud rate (230400) * 4)
 parameter CLOCK_DIVIDE = 117; // clock rate (27Mhz) / (baud rate (57600) * 4)
+//parameter CLOCK_DIVIDE = 135; // clock rate (27Mhz) / (baud rate (50000) * 4)
 
 // States for the receiving state machine.
 // These are just constants, not parameters to override.
@@ -196,7 +197,7 @@ always @(posedge clk) begin
 					tx_countdown = 4;
 					tx_state = TX_SENDING;
 				end else begin
-					// Set delay to send out 2 stop bits.
+					// Set delay to send out 2 stop bits + 1 delay.
 					tx_out = 1;
 					tx_countdown = 8;
 					tx_state = TX_DELAY_RESTART;
