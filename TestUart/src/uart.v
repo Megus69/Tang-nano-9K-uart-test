@@ -78,6 +78,22 @@ assign rx_byte = rx_data;
 assign tx = tx_out;
 assign is_transmitting = tx_state != TX_IDLE;
 
+
+reg           r_Rx_Data_R = 1'b1;
+reg           r_Rx_Data   = 1'b1;
+
+ // Purpose: Double-register the incoming data.
+  // This allows it to be used in the UART RX Clock Domain.
+  // (It removes problems caused by metastability)
+  always @(posedge clk)
+    begin
+      r_Rx_Data_R <= rx;
+      r_Rx_Data   <= r_Rx_Data_R;
+    end
+
+wire rxSync;
+assign rxSync = r_Rx_Data;
+
 always @(posedge clk) begin
 	if (rst) begin
 		recv_state = RX_IDLE;
@@ -105,7 +121,7 @@ always @(posedge clk) begin
 		RX_IDLE: begin
 			// A low pulse on the receive line indicates the
 			// start of data.
-			if (!rx) begin
+			if (!rxSync) begin
 				// Wait half the period - should resume in the
 				// middle of this first pulse.
 				rx_clk_divider = CLOCK_DIVIDE;
@@ -116,7 +132,7 @@ always @(posedge clk) begin
 		RX_CHECK_START: begin
 			if (!rx_countdown) begin
 				// Check the pulse is still there
-				if (!rx) begin
+				if (!rxSync) begin
 					// Pulse still there - good
 					// Wait the bit period to resume half-way
 					// through the first bit.
@@ -135,7 +151,7 @@ always @(posedge clk) begin
 				// Should be half-way through a bit pulse here.
 				// Read this bit in, wait for the next if we
 				// have more to get.
-				rx_data = {rx, rx_data[7:1]};
+				rx_data = {rxSync, rx_data[7:1]};
 				rx_countdown = 4;
 				rx_bits_remaining = rx_bits_remaining - 4'd1;
 				recv_state = rx_bits_remaining ? RX_READ_BITS : RX_CHECK_STOP;
@@ -146,7 +162,7 @@ always @(posedge clk) begin
 				// Should resume half-way through the stop bit
 				// This should be high - if not, reject the
 				// transmission and signal an error.
-				recv_state = rx ? RX_RECEIVED : RX_ERROR;
+				recv_state = rxSync ? RX_RECEIVED : RX_ERROR;
 			end
 		end
 		RX_DELAY_RESTART: begin
